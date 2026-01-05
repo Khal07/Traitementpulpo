@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P@THOPULP - Protocole Thérapeutique</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        body { padding-top: 60px; padding-bottom: 60px; background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Styles des sections */
+        .section-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            color: #2c3e50;
+            font-weight: bold;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            font-size: 1.1em;
+        }
+        
+        /* Checkboxes */
+        .checkbox label { font-size: 0.95em; color: #555; cursor: pointer; }
+        .checkbox input[type="checkbox"] { margin-right: 10px; cursor: pointer; }
+        .checkbox:hover { background-color: #f9f9f9; }
+        
+        /* Feedback correction */
+        .good { background-color: #dff0d8; color: #3c763d; border-radius: 4px; padding: 2px 5px; font-weight: bold; } /* Correct et coché */
+        .bad { background-color: #f2dede; color: #a94442; border-radius: 4px; padding: 2px 5px; text-decoration: line-through; } /* Coché à tort */
+        .missed { border: 2px dashed #8a6d3b; background-color: #fcf8e3; padding: 2px 5px; border-radius: 4px; display: inline-block; color: #8a6d3b;} /* Manquant */
+        .missed::after { content: " (Manquant)"; font-weight: bold; font-size: 0.8em;}
+
+        /* Header Fixe */
+        .navbar-brand { font-weight: bold; letter-spacing: 1px; }
+        .pathology-header { background: #34495e; color: white; padding: 15px; text-align: center; font-size: 1.5em; border-radius: 4px; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Ecran d'accueil */
+        #landing-page {
+            text-align: center;
+            margin-top: 50px;
+        }
+        .mode-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            margin: 20px;
+            transition: transform 0.2s;
+        }
+        .mode-card:hover { transform: translateY(-5px); }
+        .mode-title { font-size: 1.5em; font-weight: bold; margin-bottom: 20px; color: #2c3e50; }
+        .separator { border-right: 1px solid #ddd; }
+
+        /* Helpers */
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#" onclick="showMenu()">P@THOPULP - PROTOCOLE</a>
+        </div>
+        <div class="navbar-right">
+            <button class="btn btn-warning navbar-btn" id="btn-top-menu" onclick="showMenu()" style="margin-right: 15px; display:none;">Menu Principal</button>
+            <button class="btn btn-info navbar-btn" id="btn-top-new" onclick="nextCase()" style="margin-right: 15px; display:none;">Nouveau Cas</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container" id="landing-page">
+    <div class="jumbotron">
+        <h1>Bienvenue sur P@THOPULP</h1>
+        <p>Générateur de protocoles thérapeutiques</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 separator">
+            <div class="mode-card">
+                <div class="mode-title">🏋️ Mode Entraînement</div>
+                <p>Choisissez une pathologie spécifique pour réviser son protocole.</p>
+                <div class="form-group">
+                    <select class="form-control" id="training-select">
+                        <option value="" disabled selected>-- Sélectionner une pathologie --</option>
+                        </select>
+                </div>
+                <button class="btn btn-primary btn-lg btn-block" onclick="startTraining()">Commencer l'entraînement</button>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mode-card">
+                <div class="mode-title">🎓 Mode Examen</div>
+                <p>Le système sélectionne une pathologie au hasard. Testez vos connaissances en conditions réelles.</p>
+                <div style="height: 54px;"></div> <button class="btn btn-success btn-lg btn-block" onclick="startExam()">Lancer le Mode Examen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container hidden" id="app-container">
+    
+    <div class="pathology-header" id="current-pathology">
+        Chargement...
+    </div>
+
+    <form id="protocol-form">
+        
+        <div class="section-card">
+            <div class="section-title">1ère SÉANCE : Procédures mises en œuvre</div>
+            <div id="list-s1-start"></div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-title">Fin de séance : Prescription ?</div>
+            <div id="list-s1-end"></div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-title">2ème SÉANCE (Si nécessaire)</div>
+            <div id="list-s2"></div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-title">3ème SÉANCE (Si nécessaire)</div>
+            <div id="list-s3"></div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-title">4ème SÉANCE (Si nécessaire)</div>
+            <div id="list-s4"></div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-title">ÉVOLUTION DE LA MALADIE (Sans traitement)</div>
+            <div class="row">
+                <div class="col-md-6">
+                    <strong style="color:#c0392b">Voie Aiguë :</strong>
+                    <div id="list-evol-acute"></div>
+                </div>
+                <div class="col-md-6">
+                    <strong style="color:#2980b9">Voie Chronique :</strong>
+                    <div id="list-evol-chronic"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row text-center" style="margin-bottom: 50px;">
+            <button type="button" class="btn btn-success btn-lg" onclick="checkCorrection()" id="btn-correction">VALIDER LE PROTOCOLE</button>
+            <button type="button" class="btn btn-primary btn-lg hidden" onclick="nextCase()" id="btn-next-case">CAS SUIVANT</button>
+            <button type="button" class="btn btn-warning btn-lg hidden" onclick="showMenu()" id="btn-return-menu">CHOISIR UNE AUTRE PATHOLOGIE</button>
+        </div>
+
+    </form>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+
+// =========================================================
+// 1. LES LISTES DE PROPOSITIONS (Strictement copiées)
+// =========================================================
+
+const PROPOSITIONS = {
+    s1_start: [
+        "Aucune",
+        "Anesthésie",
+        "Mise en place de la digue",
+        "Cathéterisme et détermination de la longueur de travail",
+        "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas",
+        "Drainage et irrigation avec solution antiseptique",
+        "Equilibration occlusale",
+        "Mise en forme canalaire et irrigation avec NaOCl",
+        "Ouverture camérale, et irrigation avec NaOcl",
+        "Protection ou coiffage pulpaire selon le cas",
+        "Recherche de l'évacuation transcanalaire de la collection purrulente",
+        "Recherche de l'évacuation transcorticale de la collection purrulente",
+        "Suppression des facteurs étiologiques de l’inflammation",
+        "Traitement désensibilisant",
+        "Mise en place d’un IRM pour 5 semaines",
+        "Obturation canalaire définitive dans la séance",
+        "Obturation coronaire provisoire",
+        "Pas d'obturation canalaire dans la séance et dent laissée ouverte 24h si le canal ne peut pas être asséché",
+        "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche pour les formes ouvertes",
+        "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche",
+        "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche si le canal est asséché",
+        "Pose d'un antiseptique et obturation coronaire provisoire",
+        "Mise en place de biodentine / IRM au niveau caméral",
+        "Reconstitution coronaire définitive",
+        "Réparation de la restauration",
+        "Traitement canalaire temporaire à l'hydroxyde de calcium et obturation coronaire provisoire étanche",
+        "Traitement canalaire temporaire à l'hydroxyde de calcium et obturation coronaire provisoire étanche si le canal n’est pas asséché",
+        "Autre"
+    ],
+    s1_end: [
+        "Non, aucune prescription",
+        "Oui, prescription de bains de bouche",
+        "Oui, prescription d'antalgiques",
+        "Oui, presciption d'anti-inflammatoires non stéroïdiens",
+        "Oui, prescription d'anti-inflammatoires stéroïdiens",
+        "Oui, prescription d'antibiotiques",
+        "Autre"
+    ],
+    s2: [
+        "Aucune, le traitement est terminé",
+        "Anesthésie",
+        "Mise en place de la digue",
+        "Cathéterisme et détermination de la longueur de travail",
+        "Dépose du matériau d'obturation provisoire",
+        "Mise en forme canalaire",
+        "Irrigation avec NaOCl",
+        "Obturation canalaire définitive",
+        "Obturation canalaire définitive avec ciment tricalcique et gutta percha",
+        "Obturation coronaire provisoire",
+        "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche",
+        "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche si le canal est asséché",
+        "Reconstitution coronaire définitive",
+        "Traitement canalaire temporaire à l'hydroxyde de calcium et obturation coronaire provisoire étanche si le canal n’est pas asséché",
+        "Autre"
+    ],
+    s3: [
+        "Aucune, le traitement est terminé",
+        "Anesthésie",
+        "Mise en place de la digue",
+        "Dépose du matériau d'obturation provisoire",
+        "Irrigation avec NaOCl",
+        "Obturation canalaire définitive",
+        "Obturation coronaire provisoire",
+        "Reconstitution coronaire définitive",
+        "Autre"
+    ],
+    s4: [
+        "Aucune, le traitement est terminé",
+        "Anesthésie",
+        "Mise en place de la digue",
+        "Dépose du matériau d'obturation provisoire",
+        "Reconstitution coronaire définitive",
+        "Autre"
+    ],
+    evolutions: [
+        "Non décrit dans la littérature",
+        "Nécrose asymptomatique",
+        "Abcès récurrent",
+        "Hypersensibilité dentinaire",
+        "Parodontite apicale aigüe",
+        "Abcès apical aigu",
+        "Parodontite apicale chronique",
+        "Parodontite apicale chronique suppurée",
+        "Pulpite aigüe irréversible",
+        "Pulpite aigüe réversible",
+        "Pulpite chronique",
+        "Exposition dentinaire",
+        "Syndrome du septum",
+        "Cellulite",
+        "Abcès parodontal",
+        "Parodontite traumatique"
+    ]
+};
+
+// =========================================================
+// 2. BASE DE DONNÉES (CORRECTIFS 17 PATHOLOGIES)
+// =========================================================
+
+const CORRECT_DATA = {
+    "Dent saine": {
+        s1_start: ["Aucune"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Non décrit dans la littérature"],
+        evol_chronic: ["Non décrit dans la littérature"]
+    },
+    "Hypersensibilité dentinaire": {
+        s1_start: ["Equilibration occlusale", "Suppression des facteurs étiologiques de l’inflammation", "Traitement désensibilisant"],
+        s1_end: ["Oui, prescription de bains de bouche"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Non décrit dans la littérature"],
+        evol_chronic: ["Pulpite chronique"]
+    },
+    "Exposition dentinaire": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Reconstitution coronaire définitive", "Réparation de la restauration"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Pulpite aigüe réversible"],
+        evol_chronic: ["Pulpite chronique"]
+    },
+    "Syndrome du septum": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Suppression des facteurs étiologiques de l’inflammation", "Reconstitution coronaire définitive", "Réparation de la restauration"],
+        s1_end: ["Oui, prescription d'antalgiques"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Non décrit dans la littérature"],
+        evol_chronic: ["Non décrit dans la littérature"]
+    },
+    "Parodontite traumatique": {
+        s1_start: ["Equilibration occlusale", "Suppression des facteurs étiologiques de l’inflammation"],
+        s1_end: ["Oui, presciption d'anti-inflammatoires non stéroïdiens"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Non décrit dans la littérature"],
+        evol_chronic: ["Non décrit dans la littérature"]
+    },
+    "Pulpite aigüe réversible": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Protection ou coiffage pulpaire selon le cas", "Suppression des facteurs étiologiques de l’inflammation", "Mise en place d’un IRM pour 5 semaines", "Reconstitution coronaire définitive", "Réparation de la restauration"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Pulpite aigüe irréversible"],
+        evol_chronic: ["Pulpite chronique"]
+    },
+    "Pulpite chronique par degenerescence calcique": {
+        s1_start: ["Equilibration occlusale", "Suppression des facteurs étiologiques de l’inflammation"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Non décrit dans la littérature"],
+        evol_chronic: ["Non décrit dans la littérature"]
+    },
+    "Pulpite chronique irréversible": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Obturation canalaire définitive dans la séance", "Reconstitution coronaire définitive"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Parodontite apicale aigüe"],
+        evol_chronic: ["Nécrose asymptomatique"]
+    },
+    "Pulpite chronique hyperplasique": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Suppression des facteurs étiologiques de l’inflammation", "Obturation canalaire définitive dans la séance", "Reconstitution coronaire définitive"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Non décrit dans la littérature"],
+        evol_chronic: ["Nécrose asymptomatique"]
+    },
+    "Pulpite aigüe irréversible": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Obturation canalaire définitive dans la séance", "Reconstitution coronaire définitive"],
+        s1_end: ["Oui, prescription d'antalgiques"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Parodontite apicale aigüe"],
+        evol_chronic: ["Nécrose asymptomatique"]
+    },
+    "Pulpite chronique par resorption interne": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Traitement canalaire temporaire à l'hydroxyde de calcium et obturation coronaire provisoire étanche"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Irrigation avec NaOCl", "Obturation canalaire définitive", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Parodontite apicale aigüe"],
+        evol_chronic: ["Nécrose asymptomatique"]
+    },
+    "Nécrose asymptomatique": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Irrigation avec NaOCl", "Obturation canalaire définitive", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Parodontite apicale aigüe"],
+        evol_chronic: ["Parodontite apicale chronique"]
+    },
+    "Parodontite apicale chronique": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Irrigation avec NaOCl", "Obturation canalaire définitive", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Abcès récurrent"],
+        evol_chronic: ["Parodontite apicale chronique suppurée"]
+    },
+    "Parodontite apicale chronique suppuree": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Obturation canalaire définitive dans la séance", "Reconstitution coronaire définitive"],
+        s1_end: ["Non, aucune prescription"],
+        s2: ["Aucune, le traitement est terminé"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Abcès récurrent"],
+        evol_chronic: ["Non décrit dans la littérature"]
+    },
+    "Parodontite apicale aigue": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Equilibration occlusale", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche"],
+        s1_end: ["Oui, presciption d'anti-inflammatoires non stéroïdiens"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Irrigation avec NaOCl", "Obturation canalaire définitive", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Abcès apical aigu"],
+        evol_chronic: ["Parodontite apicale chronique"]
+    },
+    "Abcès apical aigu": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Recherche de l'évacuation transcanalaire de la collection purrulente", "Traitement canalaire temporaire à l'hydroxyde de calcium et obturation coronaire provisoire étanche si le canal n’est pas asséché"],
+        s1_end: ["Oui, prescription d'antalgiques"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Irrigation avec NaOCl", "Obturation canalaire définitive", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Cellulite"],
+        evol_chronic: ["Parodontite apicale chronique"]
+    },
+    "Abcès récurrent": {
+        s1_start: ["Anesthésie", "Mise en place de la digue", "Cathéterisme et détermination de la longueur de travail", "Curetage des tissus infectés et/ou dépose des matériaux résiduels selon le cas", "Mise en forme canalaire et irrigation avec NaOCl", "Ouverture camérale, et irrigation avec NaOcl", "Recherche de l'évacuation transcanalaire de la collection purrulente", "Recherche de l'évacuation transcorticale de la collection purrulente", "Pas d'obturation canalaire dans la séance, pose d'un antiseptique et obturation coronaire provisoire étanche si le canal est asséché"],
+        s1_end: ["Oui, prescription d'antalgiques"],
+        s2: ["Anesthésie", "Mise en place de la digue", "Dépose du matériau d'obturation provisoire", "Mise en forme canalaire", "Irrigation avec NaOCl", "Obturation canalaire définitive", "Reconstitution coronaire définitive"],
+        s3: ["Aucune, le traitement est terminé"],
+        s4: ["Aucune, le traitement est terminé"],
+        evol_acute: ["Cellulite"],
+        evol_chronic: ["Parodontite apicale chronique", "Parodontite apicale chronique suppuree"]
+    }
+};
+
+// =========================================================
+// 3. LOGIQUE JAVASCRIPT
+// =========================================================
+
+let currentPathology = "";
+let currentMode = "exam"; // 'exam' ou 'training'
+
+// Remplissage du select "Training" au chargement
+window.onload = function() {
+    const select = document.getElementById("training-select");
+    const sortedKeys = Object.keys(CORRECT_DATA).sort();
+    sortedKeys.forEach(key => {
+        const option = document.createElement("option");
+        option.value = key;
+        option.innerText = key.toUpperCase();
+        select.appendChild(option);
+    });
+};
+
+// --- GESTION DES MODES ---
+
+function showMenu() {
+    document.getElementById("landing-page").classList.remove("hidden");
+    document.getElementById("app-container").classList.add("hidden");
+    
+    // Reset boutons navbar
+    document.getElementById("btn-top-menu").style.display = "none";
+    document.getElementById("btn-top-new").style.display = "none";
+}
+
+function startExam() {
+    currentMode = "exam";
+    document.getElementById("landing-page").classList.add("hidden");
+    document.getElementById("app-container").classList.remove("hidden");
+    
+    // Navbar
+    document.getElementById("btn-top-menu").style.display = "inline-block";
+    document.getElementById("btn-top-new").style.display = "inline-block";
+    document.getElementById("btn-top-new").innerText = "Nouveau Cas (Aléatoire)";
+    
+    initGameRandom();
+}
+
+function startTraining() {
+    const select = document.getElementById("training-select");
+    const choice = select.value;
+    
+    if (!choice) {
+        alert("Veuillez sélectionner une pathologie dans la liste.");
+        return;
+    }
+    
+    currentMode = "training";
+    document.getElementById("landing-page").classList.add("hidden");
+    document.getElementById("app-container").classList.remove("hidden");
+    
+    // Navbar
+    document.getElementById("btn-top-menu").style.display = "inline-block";
+    document.getElementById("btn-top-new").style.display = "inline-block";
+    document.getElementById("btn-top-new").innerText = "Choisir une autre pathologie";
+    
+    loadGame(choice);
+}
+
+// Fonction unifiée pour le bouton "Nouveau Cas" / "Suivant"
+function nextCase() {
+    if (currentMode === "exam") {
+        initGameRandom();
+    } else {
+        showMenu(); // Retour au menu pour choisir
+    }
+}
+
+// --- MOTEUR DU JEU ---
+
+function initGameRandom() {
+    const keys = Object.keys(CORRECT_DATA);
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    loadGame(randomKey);
+}
+
+function loadGame(pathologyKey) {
+    currentPathology = pathologyKey;
+    document.getElementById("current-pathology").innerText = currentPathology.toUpperCase();
+    
+    // Génération des checkboxes
+    generateCheckboxes("list-s1-start", PROPOSITIONS.s1_start, "s1s");
+    generateCheckboxes("list-s1-end", PROPOSITIONS.s1_end, "s1e");
+    generateCheckboxes("list-s2", PROPOSITIONS.s2, "s2");
+    generateCheckboxes("list-s3", PROPOSITIONS.s3, "s3");
+    generateCheckboxes("list-s4", PROPOSITIONS.s4, "s4");
+    generateCheckboxes("list-evol-acute", PROPOSITIONS.evolutions, "eva");
+    generateCheckboxes("list-evol-chronic", PROPOSITIONS.evolutions, "evc");
+    
+    // Reset boutons bas de page
+    document.getElementById("btn-correction").style.display = "inline-block";
+    document.getElementById("btn-next-case").classList.add("hidden");
+    document.getElementById("btn-return-menu").classList.add("hidden");
+    
+    window.scrollTo(0, 0);
+}
+
+function generateCheckboxes(containerId, list, prefix) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    list.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "checkbox";
+        const id = prefix + "-" + index;
+        div.innerHTML = `<label id="lbl-${id}"><input type="checkbox" id="${id}" value="${item}"> ${item}</label>`;
+        container.appendChild(div);
+    });
+}
+
+function checkCorrection() {
+    const correct = CORRECT_DATA[currentPathology];
+    if (!correct) { alert("Données manquantes."); return; }
+
+    function verifySection(prefix, listSize, correctArray) {
+        if (!correctArray) correctArray = [];
+        for (let i = 0; i < listSize; i++) {
+            const id = prefix + "-" + i;
+            const checkbox = document.getElementById(id);
+            const label = document.getElementById("lbl-" + id);
+            const val = checkbox.value;
+            const isChecked = checkbox.checked;
+            const isExpected = correctArray.includes(val);
+
+            if (isChecked && isExpected) {
+                label.classList.add("good");
+            } else if (isChecked && !isExpected) {
+                label.classList.add("bad");
+            } else if (!isChecked && isExpected) {
+                label.classList.add("missed");
+            }
+        }
+    }
+
+    verifySection("s1s", PROPOSITIONS.s1_start.length, correct.s1_start);
+    verifySection("s1e", PROPOSITIONS.s1_end.length, correct.s1_end);
+    verifySection("s2", PROPOSITIONS.s2.length, correct.s2);
+    verifySection("s3", PROPOSITIONS.s3.length, correct.s3);
+    verifySection("s4", PROPOSITIONS.s4.length, correct.s4);
+    verifySection("eva", PROPOSITIONS.evolutions.length, correct.evol_acute);
+    verifySection("evc", PROPOSITIONS.evolutions.length, correct.evol_chronic);
+
+    // Gestion boutons fin de correction
+    document.getElementById("btn-correction").style.display = "none";
+    
+    if (currentMode === "exam") {
+        document.getElementById("btn-next-case").classList.remove("hidden");
+    } else {
+        document.getElementById("btn-return-menu").classList.remove("hidden");
+    }
+    
+    window.scrollTo(0, 0);
+}
+
+</script>
+</body>
+</html>
